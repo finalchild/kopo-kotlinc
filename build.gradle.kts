@@ -55,6 +55,13 @@ publishing {
         }
     }
     repositories {
-        mavenLocal()
+        maven {
+            name = "github-packages"
+            url = uri("https://maven.pkg.github.com/finalchild/kopo")
+            credentials {
+                username = project.findProperty("gpr.user") as? String ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") as? String? ?: System.getenv("TOKEN")
+            }
+        }
     }
 }
