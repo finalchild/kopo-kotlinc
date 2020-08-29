@@ -2,6 +2,7 @@ package me.finalchild.kopo
 
 import org.jetbrains.kotlin.codegen.AbstractClassBuilder
 import org.jetbrains.kotlin.codegen.ClassBuilder
+import org.jetbrains.kotlin.codegen.inline.SourceMapper
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.org.objectweb.asm.FieldVisitor
@@ -23,5 +24,11 @@ class KopoClassBuilder(val delegate: ClassBuilder)
     override fun newMethod(origin: JvmDeclarationOrigin, access: Int, name: String, desc: String, signature: String?, exceptions: Array<out String>?): MethodVisitor {
         (visitor as KopoClassVisitor).methodOrigins.add(origin)
         return super.newMethod(origin, access, name, desc, signature, exceptions)
+    }
+
+    override fun visitSMAP(smap: SourceMapper, backwardsCompatibleSyntax: Boolean) {
+        (visitor as KopoClassVisitor).smap = smap
+        (visitor as KopoClassVisitor).backwardsCompatibleSyntax = backwardsCompatibleSyntax
+        super.visitSMAP(smap, backwardsCompatibleSyntax)
     }
 }
