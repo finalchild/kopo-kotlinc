@@ -1,12 +1,22 @@
 package me.finalchild.kopo
 
+import org.jetbrains.kotlin.codegen.ClassBuilder
+import org.jetbrains.kotlin.codegen.inline.SourceMapper
 import org.jetbrains.kotlin.codegen.optimization.common.asSequence
+import org.jetbrains.kotlin.com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.org.objectweb.asm.ClassVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.tree.*
 import java.util.stream.Collectors
 
-class KopoClassVisitor(val original: ClassVisitor) : ClassVisitor(Opcodes.ASM7, ClassNode()) {
+class KopoClassVisitor(private val delegate: ClassBuilder) : ClassVisitor(Opcodes.ASM7, ClassNode()) {
+    var origin: PsiElement? = null
+    val fieldOrigins: MutableList<JvmDeclarationOrigin> = mutableListOf()
+    val methodOrigins: MutableList<JvmDeclarationOrigin> = mutableListOf()
+    var smap: SourceMapper? = null
+    var backwardsCompatibleSyntax: Boolean = false
+
     override fun visitEnd() {
         super.visitEnd()
         val clazz = cv as ClassNode
@@ -19,7 +29,7 @@ class KopoClassVisitor(val original: ClassVisitor) : ClassVisitor(Opcodes.ASM7, 
                 method.name == "<clinit>" && method.desc == "()V" && (clazz.version < 51 || (method.access and Opcodes.ACC_STATIC) != 0)
             } ?: return@run
 
-            val instanceVariable = clazz.fields.find { field ->
+            clazz.fields.find { field ->
                 (field.access and Opcodes.ACC_PUBLIC != 0) && (field.access and Opcodes.ACC_FINAL != 0) && (field.access and Opcodes.ACC_STATIC != 0)
                         && field.name == "INSTANCE" && field.desc == "L${clazz.name};"
             } ?: return@run
@@ -28,7 +38,7 @@ class KopoClassVisitor(val original: ClassVisitor) : ClassVisitor(Opcodes.ASM7, 
                 method.name == "<init>" && method.desc == "()V"
             }.takeIf {
                 it.size == 1
-            }?.first()?.takeIf { method ->
+            }?.first()!!.takeIf { method ->
                 (method.access and Opcodes.ACC_PRIVATE) != 0
             } ?: return@run
 
@@ -45,7 +55,9 @@ class KopoClassVisitor(val original: ClassVisitor) : ClassVisitor(Opcodes.ASM7, 
                 !methodsNamedKopoInit.contains(candidate)
             }
 
-            val wrapperObjectInit = MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null).also { clazz.methods.add(it) }
+            val wrapperObjectInit = MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null)
+            clazz.methods.add(wrapperObjectInit)
+            methodOrigins.add(JvmDeclarationOrigin.NO_ORIGIN)
             wrapperObjectInit.instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
             wrapperObjectInit.instructions.add(InsnNode(Opcodes.DUP))
             wrapperObjectInit.instructions.add(MethodInsnNode(Opcodes.INVOKESPECIAL, "org/bukkit/plugin/java/JavaPlugin", "<init>", "()V", false))
@@ -76,6 +88,6 @@ class KopoClassVisitor(val original: ClassVisitor) : ClassVisitor(Opcodes.ASM7, 
                 }
             }
         }
-        clazz.accept(original)
+        clazz.accept(ClassBuilderClassVisitor(delegate, origin, fieldOrigins.iterator(), methodOrigins.iterator(), smap, backwardsCompatibleSyntax))
     }
 }

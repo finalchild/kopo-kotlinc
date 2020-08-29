@@ -1,6 +1,6 @@
 plugins {
     `java-library`
-    kotlin("jvm") version "1.3.72"
+    kotlin("jvm") version "1.4.0"
     `maven-publish`
 }
 
@@ -47,20 +47,27 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 publishing {
     publications {
         create<MavenPublication>("maven") {
-            groupId = "me.finalchild"
-            artifactId = "kopo"
-            version = "0.0.1-SNAPSHOT"
-
             from(components["kotlin"])
+            pom {
+                description.set(project.description)
+                inceptionYear.set("2020")
+                url.set("https://github.com/finalchild/kopo")
+
+
+            }
         }
     }
     repositories {
         maven {
-            name = "github-packages"
-            url = uri("https://maven.pkg.github.com/finalchild/kopo")
+            name = "heartpattern-repo"
+            url = if (project.version.toString().endsWith("-SNAPSHOT")) {
+                uri("https://maven.heartpattern.io/repository/finalchild-snapshots/")
+            } else {
+                uri("https://maven.heartpattern.io/repository/finalchild-releases/")
+            }
             credentials {
-                username = project.findProperty("gpr.user") as? String ?: System.getenv("USERNAME")
-                password = project.findProperty("gpr.key") as? String? ?: System.getenv("TOKEN")
+                username = project.findProperty("repo-username") as? String ?: System.getenv("REPO_USERNAME")
+                password = project.findProperty("repo-password") as? String? ?: System.getenv("REPO_PASSWORD")
             }
         }
     }
