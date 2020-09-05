@@ -1,4 +1,4 @@
-package me.finalchild.kopo
+package me.finalchild.kopo.kotlinc
 
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor

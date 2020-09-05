@@ -1,4 +1,4 @@
-package me.finalchild.kopo
+package me.finalchild.kopo.kotlinc
 
 import org.jetbrains.kotlin.codegen.extensions.ClassBuilderInterceptorExtension
 import org.jetbrains.kotlin.com.intellij.mock.MockProject

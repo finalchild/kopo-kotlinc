@@ -1,2 +1,2 @@
-rootProject.name = "kopo"
+rootProject.name = "kopo-kotlinc"
 

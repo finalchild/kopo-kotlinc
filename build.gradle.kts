@@ -1,25 +1,21 @@
 plugins {
-    `java-library`
     kotlin("jvm") version "1.4.0"
+    `java-library`
     `maven-publish`
+    signing
+    id("com.jfrog.bintray") version "1.8.5"
 }
 
 group = "me.finalchild"
-version = "0.0.1-SNAPSHOT"
-
-description = "Kotlin object is plugin object."
+version = "0.1.0-SNAPSHOT"
+description = "kotlinc plugin for kopo"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
-    implementation(group="org.jetbrains.kotlin", name="kotlin-compiler-embeddable")
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.encoding = "UTF-8"
+    api(group="org.jetbrains.kotlin", name="kotlin-compiler-embeddable")
 }
 
 java {
@@ -28,19 +24,22 @@ java {
     modularity.inferModulePath.set(true)
     withSourcesJar()
 }
+
 tasks.compileJava {
-    inputs.property("moduleName", "me.finalchild.kopo")
+    dependsOn(tasks.compileKotlin)
+    inputs.property("moduleName", "me.finalchild.kopo.kotlinc")
+    options.encoding = "UTF-8"
+    destinationDir = tasks.compileKotlin.get().destinationDir
     doFirst {
         options.compilerArgs = listOf("--module-path", classpath.asPath)
         classpath = files()
     }
-    destinationDir = tasks.compileKotlin.get().destinationDir
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+tasks.compileKotlin {
     kotlinOptions {
         freeCompilerArgs = listOf("-progressive")
-        jvmTarget = "13"
+        jvmTarget = "14"
     }
 }
 
@@ -48,26 +47,81 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["kotlin"])
+            artifact(tasks["sourcesJar"])
+
             pom {
+                name.set(project.name)
                 description.set(project.description)
+                url.set("https://github.com/finalchild/kopo-kotlinc")
                 inceptionYear.set("2020")
-                url.set("https://github.com/finalchild/kopo")
-
-
+                organization {
+                    name.set("Our Minecraft Space")
+                    url.set("https://ourmc.space/")
+                }
+                licenses {
+                    license {
+                        name.set("ISC License")
+                        url.set("https://opensource.org/licenses/isc-license.txt")
+                        distribution.set("repo")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("finalchild")
+                        name.set("Final Child")
+                        email.set("finalchild2@gmail.com")
+                        url.set("https://github.com/finalchild")
+                        organization.set("Our Minecraft Space")
+                        organizationUrl.set("https://github.com/Our-Minecraft-Space")
+                        roles.set(setOf("developer"))
+                        timezone.set("Asia/Seoul")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/finalchild/kopo-kotlinc.git")
+                    developerConnection.set("scm:git:https://github.com/finalchild/kopo-kotlinc.git")
+                    tag.set(if (!(project.version as String).endsWith("-SNAPSHOT")) {
+                        "v${project.version}"
+                    } else {
+                        "HEAD"
+                    })
+                    url.set("https://github.com/finalchild/kopo-kotlinc")
+                }
+                issueManagement {
+                    system.set("GitHub")
+                    url.set("https://github.com/finalchild/kopo-kotlinc/issues")
+                }
+                ciManagement {
+                    system.set("GitHub Actions")
+                    url.set("https://github.com/finalchild/kopo-kotlinc/actions")
+                }
+                distributionManagement {
+                    downloadUrl.set("https://github.com/fnialchild/kopo-kotlinc/releases")
+                }
             }
         }
     }
-    repositories {
-        maven {
-            name = "heartpattern-repo"
-            url = if (project.version.toString().endsWith("-SNAPSHOT")) {
-                uri("https://maven.heartpattern.io/repository/finalchild-snapshots/")
+}
+
+signing {
+    useInMemoryPgpKeys(System.getenv("SIGNING_KEY"), System.getenv("SIGNING_PASSWORD"))
+    sign(publishing.publications["maven"])
+}
+
+bintray {
+    user = System.getenv("BINTRAY_USER")
+    key = System.getenv("BINTRAY_KEY")
+    setPublications("maven")
+    publish = true
+    pkg.run {
+        repo = "Final_Repo"
+        name = project.name
+        version.run {
+            name = project.version as String
+            vcsTag = if (!(project.version as String).endsWith("-SNAPSHOT")) {
+                "v${project.version}"
             } else {
-                uri("https://maven.heartpattern.io/repository/finalchild-releases/")
-            }
-            credentials {
-                username = project.findProperty("repo-username") as? String ?: System.getenv("REPO_USERNAME")
-                password = project.findProperty("repo-password") as? String? ?: System.getenv("REPO_PASSWORD")
+                null
             }
         }
     }

@@ -1,22 +1,12 @@
-package me.finalchild.kopo
+package me.finalchild.kopo.kotlinc
 
-import org.jetbrains.kotlin.codegen.ClassBuilder
-import org.jetbrains.kotlin.codegen.inline.SourceMapper
 import org.jetbrains.kotlin.codegen.optimization.common.asSequence
-import org.jetbrains.kotlin.com.intellij.psi.PsiElement
-import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.org.objectweb.asm.ClassVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.tree.*
 import java.util.stream.Collectors
 
-class KopoClassVisitor(private val delegate: ClassBuilder) : ClassVisitor(Opcodes.ASM7, ClassNode()) {
-    var origin: PsiElement? = null
-    val fieldOrigins: MutableList<JvmDeclarationOrigin> = mutableListOf()
-    val methodOrigins: MutableList<JvmDeclarationOrigin> = mutableListOf()
-    var smap: SourceMapper? = null
-    var backwardsCompatibleSyntax: Boolean = false
-
+class KopoClassVisitor(private val delegate: ClassVisitor) : ClassVisitor(Opcodes.ASM7, ClassNode()) {
     override fun visitEnd() {
         super.visitEnd()
         val clazz = cv as ClassNode
@@ -57,7 +47,6 @@ class KopoClassVisitor(private val delegate: ClassBuilder) : ClassVisitor(Opcode
 
             val wrapperObjectInit = MethodNode(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null)
             clazz.methods.add(wrapperObjectInit)
-            methodOrigins.add(JvmDeclarationOrigin.NO_ORIGIN)
             wrapperObjectInit.instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
             wrapperObjectInit.instructions.add(InsnNode(Opcodes.DUP))
             wrapperObjectInit.instructions.add(MethodInsnNode(Opcodes.INVOKESPECIAL, "org/bukkit/plugin/java/JavaPlugin", "<init>", "()V", false))
@@ -88,6 +77,6 @@ class KopoClassVisitor(private val delegate: ClassBuilder) : ClassVisitor(Opcode
                 }
             }
         }
-        clazz.accept(ClassBuilderClassVisitor(delegate, origin, fieldOrigins.iterator(), methodOrigins.iterator(), smap, backwardsCompatibleSyntax))
+        clazz.accept(delegate)
     }
 }
