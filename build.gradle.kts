@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "me.finalchild"
-version = "0.1.0-SNAPSHOT"
+version = "0.1.0"
 description = "kotlinc plugin for kopo"
 
 repositories {
